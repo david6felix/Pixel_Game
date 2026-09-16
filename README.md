@@ -1,501 +1,804 @@
 # Pixel_Game
 game to understand how pixels work
 
-<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>משחק חלליות 90s - כולל סאונד</title>
+    <title>משחק יצירת תמונות מפיקסלים</title>
+    <!-- html2canvas library for saving element as image -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --accent-color: #4a90e2;
+        }
+
         body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             margin: 0;
-            padding: 0;
-            background-color: #000;
-            color: #fff;
-            font-family: 'Courier New', Courier, monospace;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            overflow: hidden;
-            user-select: none;
+            box-sizing: border-box;
         }
 
-        #game-container {
-            position: relative;
-            box-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
-            border: 4px solid #333;
+        h1 {
+            margin-top: 0;
+            color: #2c3e50;
         }
 
-        canvas {
-            background-color: #050510;
-            display: block;
-        }
-
-        .ui-panel {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            display: flex;
-            justify-content: space-between;
-            font-size: 18px;
-            font-weight: bold;
-            color: #00ffcc;
-            text-shadow: 2px 2px #ff0055;
-            pointer-events: none;
-        }
-
-        #overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
+        .game-container {
+            background-color: var(--card-bg);
+            padding: 20px 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
+            max-width: 650px;
+            width: 100%;
+        }
+
+        .header-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .main-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            width: 100%;
+        }
+
+        /* הלוח הראשי */
+        .pixel-grid {
+            display: grid;
+            gap: 2px;
+            background-color: #bbb;
+            border: 3px solid #888;
+            border-radius: 4px;
+            padding: 2px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .pixel {
+            width: 100%;
+            height: 100%;
+            background-color: #e0e0e0;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            transition: background-color 0.1s;
+        }
+
+        .pixel.active {
+            border: 2px solid #ff3366;
+            box-shadow: inset 0 0 5px rgba(255,51,102,0.8);
+        }
+
+        /* חלונית הפיקסל הבא (בצד ימין) */
+        .target-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px dashed #a0a0a0;
+        }
+
+        .target-pixel-display {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            border: 2px solid #333;
+            margin-top: 8px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+        }
+
+        /* מקרא הצבעים/מספרים */
+        .palette {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+            width: 100%;
+        }
+
+        .palette-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 60px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+            transition: transform 0.1s, box-shadow 0.1s;
             color: #fff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .palette-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.15);
+        }
+
+        .palette-btn:active {
+            transform: translateY(0);
+        }
+
+        .palette-btn span {
+            font-size: 0.75rem;
+            margin-top: 2px;
+            opacity: 0.9;
+        }
+
+        /* מסך סיכום תוצאה */
+        .summary-card {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
             text-align: center;
         }
 
-        #overlay h1 {
-            font-size: 36px;
-            color: #ff0055;
-            text-shadow: 3px 3px #00ffcc;
-            margin-bottom: 10px;
+        .results-comparison {
+            display: flex;
+            gap: 20px;
+            margin: 15px 0;
+            justify-content: center;
         }
 
-        #overlay p {
-            font-size: 16px;
-            margin: 5px 0;
-            color: #ccc;
+        .result-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .btn {
-            margin-top: 20px;
-            padding: 12px 24px;
-            font-size: 18px;
-            font-family: inherit;
-            background: #ff0055;
             color: white;
             border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 25px;
             cursor: pointer;
-            box-shadow: 4px 4px 0px #00ffcc;
-            transition: transform 0.1s;
+            margin: 8px 5px;
+            transition: background-color 0.2s, transform 0.1s;
         }
-
-        .btn:hover {
-            transform: translate(-2px, -2px);
-            box-shadow: 6px 6px 0px #00ffcc;
-        }
-
+        
         .btn:active {
-            transform: translate(2px, 2px);
-            box-shadow: 2px 2px 0px #00ffcc;
+            transform: scale(0.98);
         }
 
-        .controls-hint {
+        .btn-next {
+            background-color: #2ecc71;
+        }
+
+        .btn-next:hover {
+            background-color: #27ae60;
+        }
+
+        .btn-save {
+            background-color: #3498db;
+        }
+
+        .btn-save:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-restart {
+            background-color: #e67e22;
+        }
+
+        .btn-restart:hover {
+            background-color: #d35400;
+        }
+
+        /* כרטיס תעודת סיכום לשמירה כתמונה */
+        .summary-export-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f7f9fc 100%);
+            border: 2px solid #e1e8ed;
+            border-radius: 16px;
+            padding: 25px;
+            width: 90%;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 15px 0;
+            text-align: right;
+        }
+
+        .stat-item {
+            background: #ffffff;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid #eef2f5;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.15rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .final-score-box {
+            background: #2c3e50;
+            color: #ffffff;
+            padding: 15px;
+            border-radius: 12px;
             margin-top: 15px;
-            font-size: 12px;
-            color: #888;
+        }
+
+        .final-score-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.8;
+        }
+
+        .final-score-number {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #f1c40f;
         }
     </style>
 </head>
 <body>
 
-<div id="game-container">
-    <canvas id="gameCanvas" width="600" height="700"></canvas>
-    
-    <div class="ui-panel">
-        <div id="scoreDisplay">ניקוד: 0</div>
-        <div id="livesDisplay">חיים: ♥♥♥</div>
-        <div id="stageDisplay">שלב: 1</div>
+<div class="game-container">
+    <!-- מסך המשחק -->
+    <div id="game-screen" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+        <div class="header-info">
+            <span id="level-title">שלב 1 (4x4)</span>
+            <span id="timer-display">זמן: 00:00</span>
+        </div>
+
+        <div class="main-display">
+            <!-- לוח המשחק שמתמלא -->
+            <div id="grid" class="pixel-grid"></div>
+
+            <!-- חלונית הצגת הפיקסל הבא מימין -->
+            <div class="target-panel">
+                <span style="font-weight: bold; font-size: 0.9rem;">הפיקסל הבא:</span>
+                <div id="target-pixel" class="target-pixel-display"></div>
+            </div>
+        </div>
+
+        <p style="margin-bottom: 5px; font-weight: bold;">לחץ על המספר המתאים בצבעו:</p>
+        <!-- מקרא המקשים/הצבעים -->
+        <div id="palette" class="palette"></div>
     </div>
 
-    <div id="overlay">
-        <h1 id="overlayTitle">חלליות 1990</h1>
-        <p id="overlaySub">לחץ על התחל כדי לשחק!</p>
-        <button class="btn" id="startBtn" onclick="startGame()">התחל משחק</button>
-        <div class="controls-hint">
-            מקשים: חיצים לזז | רווח לירי מתמשך | P להשהייה
+    <!-- מסך סיכום שלב יחיד -->
+    <div id="summary-screen" class="summary-card">
+        <h2>כל הכבוד! השלמת את השלב! 🎉</h2>
+        <p id="summary-name" style="font-size: 1.2rem; font-weight: bold; color: #34495e;"></p>
+        <p id="summary-stats"></p>
+
+        <div class="results-comparison">
+            <div class="result-box">
+                <span>מה שיצרת:</span>
+                <div id="user-result-grid" class="pixel-grid" style="margin-top: 5px;"></div>
+            </div>
+            <div class="result-box">
+                <span>התמונה המקורית:</span>
+                <div id="target-result-grid" class="pixel-grid" style="margin-top: 5px;"></div>
+            </div>
+        </div>
+
+        <button class="btn btn-next" onclick="nextLevel()">לשלב הבא ⬅️</button>
+    </div>
+
+    <!-- מסך סיכום כללי סופי (תעודת סיום) -->
+    <div id="final-summary-screen" class="summary-card">
+        <h2>🏆 אלופים! סיימתם את כל השלבים! 🏆</h2>
+        <p style="margin-top:0; color:#555;">הנה סיכום הביצועים המלא שלכם:</p>
+
+        <!-- הכרטיס המעוצב שיינצל כתמונה -->
+        <div id="export-card" class="summary-export-card">
+            <h3 style="margin: 0 0 10px 0; color: #2c3e50;">תעודת אמן פיקסלים 🎨</h3>
+            <div style="font-size:0.85rem; color:#7f8c8d; margin-bottom: 15px;">משחק צביעת פיקסלים (שלבים 4x4 עד 10x10)</div>
+            
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">זמן כולל למשחק:</div>
+                    <div class="stat-value" id="final-total-time">00:00</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">זמן ממוצע לפיקסל:</div>
+                    <div class="stat-value" id="final-avg-time">0.00 שניות</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">פיקסלים נכונים:</div>
+                    <div class="stat-value" id="final-correct-pixels" style="color: #2ecc71;">0 / 0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">כמות טעויות:</div>
+                    <div class="stat-value" id="final-wrong-pixels" style="color: #e74c3c;">0</div>
+                </div>
+            </div>
+
+            <div class="final-score-box">
+                <div class="final-score-title">ניקוד משוקלל סופי</div>
+                <div class="final-score-number" id="final-score">0</div>
+                <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 4px;">חישוב: (דיוק % × 100) + בונוס מהירות</div>
+            </div>
+        </div>
+
+        <div>
+            <button class="btn btn-save" onclick="saveAsImage()">📸 שמור סיכום כתמונה</button>
+            <button class="btn btn-restart" onclick="restartGame()">🔄 משחק חדש</button>
         </div>
     </div>
 </div>
 
 <script>
-    // --- מנוע אודיו (Web Audio API) ---
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    let audioCtx = null;
-    let musicInterval = null;
-    let isMuted = false;
+    // Audio Synth Context
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    function initAudio() {
-        if (!audioCtx) {
-            audioCtx = new AudioContext();
-        }
+    function playPixelSound() {
         if (audioCtx.state === 'suspended') {
             audioCtx.resume();
         }
-    }
-
-    // אפקטי סאונד retro
-    function playSound(type) {
-        if (!audioCtx) return;
-
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.08);
+        
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+        
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-
-        const now = audioCtx.currentTime;
-
-        if (type === 'shoot') {
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(600, now);
-            osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
-            osc.start(now);
-            osc.stop(now + 0.1);
-        } else if (type === 'explosion') {
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(150, now);
-            osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
-            gain.gain.setValueAtTime(0.2, now);
-            gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
-            osc.start(now);
-            osc.stop(now + 0.3);
-        } else if (type === 'hit') {
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(120, now);
-            osc.frequency.linearRampToValueAtTime(60, now + 0.15);
-            gain.gain.setValueAtTime(0.2, now);
-            gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
-            osc.start(now);
-            osc.stop(now + 0.15);
-        } else if (type === 'gameover') {
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(300, now);
-            osc.frequency.linearRampToValueAtTime(80, now + 0.6);
-            gain.gain.setValueAtTime(0.3, now);
-            gain.gain.linearRampToValueAtTime(0.01, now + 0.6);
-            osc.start(now);
-            osc.stop(now + 0.6);
-        }
+        
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.08);
     }
 
-    // מוזיקת רקע 8-bit בלופ
-    const bgNotes = [220, 247, 261, 293, 329, 293, 261, 247]; // סולם מינורי retro
-    let noteIndex = 0;
-
-    function startBgMusic() {
-        stopBgMusic();
-        musicInterval = setInterval(() => {
-            if (!audioCtx || isPaused || !gameRunning) return;
-            
+    function playLevelCompleteSound() {
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        const notes = [261.63, 329.63, 392.00, 523.25];
+        notes.forEach((freq, idx) => {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
+            const startTime = audioCtx.currentTime + idx * 0.1;
+            
             osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, startTime);
             
-            let freq = bgNotes[noteIndex % bgNotes.length];
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            
-            gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+            gain.gain.setValueAtTime(0.2, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.25);
             
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.2);
+            osc.start(startTime);
+            osc.stop(startTime + 0.25);
+        });
+    }
+
+    function playGameCompleteSound() {
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        const notes = [330, 392, 493.88, 523.25, 659.25, 783.99];
+        notes.forEach((freq, idx) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const startTime = audioCtx.currentTime + idx * 0.12;
             
-            noteIndex++;
-        }, 200);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, startTime);
+            
+            gain.gain.setValueAtTime(0.25, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.4);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start(startTime);
+            osc.stop(startTime + 0.4);
+        });
     }
 
-    function stopBgMusic() {
-        if (musicInterval) clearInterval(musicInterval);
-    }
-
-    // --- הגדרות משחק ---
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-
-    const overlay = document.getElementById('overlay');
-    const overlayTitle = document.getElementById('overlayTitle');
-    const overlaySub = document.getElementById('overlaySub');
-    const startBtn = document.getElementById('startBtn');
-
-    let gameRunning = false;
-    let isPaused = false;
-    let score = 0;
-    let lives = 3;
-    let stage = 1;
-
-    let keys = {};
-    let lastShootTime = 0;
-    const shootInterval = 150; // זמן בין יריות (מילישניות)
-
-    // שחקן
-    const player = {
-        x: canvas.width / 2 - 20,
-        y: canvas.height - 60,
-        width: 40,
-        height: 40,
-        speed: 6,
-        color: '#00ffcc'
+    const COLOR_MAP = {
+        0: { code: '#FFFFFF', name: 'לבן' },
+        1: { code: '#2ecc71', name: 'ירוק' },
+        2: { code: '#f1c40f', name: 'צהוב' },
+        3: { code: '#3498db', name: 'כחול' },
+        4: { code: '#e74c3c', name: 'אדום' },
+        5: { code: '#e67e22', name: 'כתום' },
+        6: { code: '#9b59b6', name: 'סגול' },
+        7: { code: '#795548', name: 'חום' },
+        8: { code: '#34495e', name: 'שחור/כהה' }
     };
 
-    let bullets = [];
-    let enemies = [];
-    let particles = [];
-    let stars = [];
+    const LEVELS = [
+        {
+            size: 4,
+            name: "פרח קטן 🌸",
+            data: [
+                0, 2, 2, 0,
+                2, 4, 4, 2,
+                0, 1, 1, 0,
+                0, 1, 0, 0
+            ]
+        },
+        {
+            size: 5,
+            name: "בית קטן 🏠",
+            data: [
+                0, 0, 4, 0, 0,
+                0, 4, 4, 4, 0,
+                0, 2, 2, 2, 0,
+                0, 2, 3, 2, 0,
+                0, 2, 2, 2, 0
+            ]
+        },
+        {
+            size: 6,
+            name: "סמיילי קורץ 😉",
+            data: [
+                0, 2, 2, 2, 2, 0,
+                2, 8, 2, 8, 8, 2,
+                2, 2, 2, 2, 2, 2,
+                2, 4, 2, 2, 4, 2,
+                2, 2, 4, 4, 2, 2,
+                0, 2, 2, 2, 2, 0
+            ]
+        },
+        {
+            size: 7,
+            name: "לב אדום ❤️",
+            data: [
+                0, 4, 4, 0, 4, 4, 0,
+                4, 4, 4, 4, 4, 4, 4,
+                4, 4, 4, 4, 4, 4, 4,
+                0, 4, 4, 4, 4, 4, 0,
+                0, 0, 4, 4, 4, 0, 0,
+                0, 0, 0, 4, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0
+            ]
+        },
+        {
+            size: 8,
+            name: "פטרייה קסומה 🍄",
+            data: [
+                0, 0, 4, 4, 4, 4, 0, 0,
+                0, 4, 4, 0, 4, 0, 4, 0,
+                4, 4, 0, 4, 4, 4, 4, 4,
+                4, 4, 4, 4, 0, 4, 4, 4,
+                0, 0, 0, 2, 2, 0, 0, 0,
+                0, 0, 0, 2, 2, 0, 0, 0,
+                0, 0, 0, 2, 2, 0, 0, 0,
+                0, 1, 1, 1, 1, 1, 1, 0
+            ]
+        },
+        {
+            size: 9,
+            name: "ברווז צהוב 🐤",
+            data: [
+                0, 0, 0, 2, 2, 2, 0, 0, 0,
+                0, 0, 2, 2, 8, 2, 5, 5, 0,
+                0, 0, 2, 2, 2, 2, 5, 0, 0,
+                0, 0, 0, 2, 2, 2, 0, 0, 0,
+                0, 2, 2, 2, 2, 2, 2, 0, 0,
+                2, 2, 2, 2, 2, 2, 2, 2, 0,
+                2, 2, 2, 2, 2, 2, 2, 2, 0,
+                0, 2, 2, 2, 2, 2, 2, 0, 0,
+                0, 0, 3, 3, 3, 3, 0, 0, 0
+            ]
+        },
+        {
+            size: 10,
+            name: "ספינת חלל 🚀",
+            data: [
+                0, 0, 0, 0, 4, 4, 0, 0, 0, 0,
+                0, 0, 0, 4, 0, 0, 4, 0, 0, 0,
+                0, 0, 0, 0, 3, 3, 0, 0, 0, 0,
+                0, 0, 0, 0, 3, 3, 0, 0, 0, 0,
+                0, 0, 0, 3, 3, 3, 3, 0, 0, 0,
+                0, 4, 0, 3, 8, 8, 3, 0, 4, 0,
+                0, 4, 0, 3, 3, 3, 3, 0, 4, 0,
+                4, 4, 4, 3, 3, 3, 3, 4, 4, 4,
+                0, 0, 0, 5, 5, 5, 5, 0, 0, 0,
+                0, 0, 0, 2, 0, 0, 2, 0, 0, 0
+            ]
+        }
+    ];
 
-    // יצירת כוכבים לרקע
-    for (let i = 0; i < 60; i++) {
-        stars.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            size: Math.random() * 2 + 1,
-            speed: Math.random() * 3 + 0.5
+    let currentLevelIdx = 0;
+    let currentPixelSequence = [];
+    let currentStep = 0;
+    let userChoices = [];
+    let timerInterval = null;
+    let secondsElapsed = 0;
+
+    let gameStats = {
+        totalTime: 0,
+        totalPixels: 0,
+        correctPixels: 0,
+        wrongPixels: 0
+    };
+
+    function startLevel(levelIdx) {
+        currentLevelIdx = levelIdx;
+        const level = LEVELS[currentLevelIdx];
+        const size = level.size;
+
+        document.getElementById('level-title').innerText = `שלב ${levelIdx + 1} (${size}x${size})`;
+        document.getElementById('game-screen').style.display = 'flex';
+        document.getElementById('summary-screen').style.display = 'none';
+        document.getElementById('final-summary-screen').style.display = 'none';
+
+        currentPixelSequence = [];
+        for (let r = 0; r < size; r++) {
+            for (let c = size - 1; c >= 0; c--) {
+                currentPixelSequence.push(r * size + c);
+            }
+        }
+
+        currentStep = 0;
+        userChoices = new Array(size * size).fill(null);
+
+        buildGrid(document.getElementById('grid'), size, 280);
+        buildPalette();
+        resetTimer();
+        updateStepDisplay();
+    }
+
+    function buildGrid(gridEl, size, maxPixelAreaSize) {
+        gridEl.innerHTML = '';
+        gridEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+        gridEl.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+        
+        const cellSize = Math.floor(maxPixelAreaSize / size);
+        gridEl.style.width = `${cellSize * size}px`;
+        gridEl.style.height = `${cellSize * size}px`;
+
+        for (let i = 0; i < size * size; i++) {
+            const pixel = document.createElement('div');
+            pixel.className = 'pixel';
+            pixel.id = `grid-pixel-${i}`;
+            gridEl.appendChild(pixel);
+        }
+    }
+
+    function buildPalette() {
+        const paletteEl = document.getElementById('palette');
+        paletteEl.innerHTML = '';
+
+        const levelData = LEVELS[currentLevelIdx].data;
+        const usedColors = [...new Set(levelData)].sort();
+
+        usedColors.forEach(colorNum => {
+            const colorInfo = COLOR_MAP[colorNum];
+            const btn = document.createElement('button');
+            btn.className = 'palette-btn';
+            btn.style.backgroundColor = colorInfo.code;
+            
+            if (colorNum === 0 || colorNum === 2) {
+                btn.style.color = '#000';
+                btn.style.textShadow = 'none';
+            }
+
+            btn.innerHTML = `${colorNum}<span>${colorInfo.name}</span>`;
+            btn.onclick = () => handleColorSelection(colorNum);
+            paletteEl.appendChild(btn);
         });
     }
 
-    // מאזיני מקלדת
-    window.addEventListener('keydown', e => {
-        keys[e.code] = true;
+    function updateStepDisplay() {
+        const size = LEVELS[currentLevelIdx].size;
         
-        if (e.code === 'KeyP' && gameRunning) {
-            togglePause();
+        for (let i = 0; i < size * size; i++) {
+            const el = document.getElementById(`grid-pixel-${i}`);
+            if (el) el.classList.remove('active');
         }
-    });
 
-    window.addEventListener('keyup', e => {
-        keys[e.code] = false;
-    });
+        if (currentStep < currentPixelSequence.length) {
+            const pixelIndex = currentPixelSequence[currentStep];
+            const currentEl = document.getElementById(`grid-pixel-${pixelIndex}`);
+            if (currentEl) currentEl.classList.add('active');
 
-    function togglePause() {
-        isPaused = !isPaused;
-        if (isPaused) {
-            overlayTitle.innerText = "מושהה";
-            overlaySub.innerText = "לחץ P או המשך כדי לחזור";
-            startBtn.innerText = "המשך";
-            overlay.style.display = 'flex';
+            const targetColorNum = LEVELS[currentLevelIdx].data[pixelIndex];
+            document.getElementById('target-pixel').style.backgroundColor = COLOR_MAP[targetColorNum].code;
         } else {
-            overlay.style.display = 'none';
-            requestAnimationFrame(gameLoop);
+            finishLevel();
         }
     }
 
-    function startGame() {
-        initAudio();
-        
-        if (isPaused) {
-            togglePause();
-            return;
+    function handleColorSelection(selectedColorNum) {
+        if (currentStep >= currentPixelSequence.length) return;
+
+        playPixelSound();
+
+        const pixelIndex = currentPixelSequence[currentStep];
+        userChoices[pixelIndex] = selectedColorNum;
+
+        const pixelEl = document.getElementById(`grid-pixel-${pixelIndex}`);
+        pixelEl.style.backgroundColor = COLOR_MAP[selectedColorNum].code;
+
+        currentStep++;
+        updateStepDisplay();
+    }
+
+    window.addEventListener('keydown', (e) => {
+        const key = parseInt(e.key);
+        if (!isNaN(key) && COLOR_MAP[key]) {
+            const levelData = LEVELS[currentLevelIdx].data;
+            if (levelData.includes(key)) {
+                handleColorSelection(key);
+            }
+        }
+    });
+
+    function resetTimer() {
+        clearInterval(timerInterval);
+        secondsElapsed = 0;
+        updateTimerDisplay();
+        timerInterval = setInterval(() => {
+            secondsElapsed++;
+            updateTimerDisplay();
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+        const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+        document.getElementById('timer-display').innerText = `זמן: ${mins}:${secs}`;
+    }
+
+    function finishLevel() {
+        clearInterval(timerInterval);
+        playLevelCompleteSound();
+
+        const level = LEVELS[currentLevelIdx];
+        const size = level.size;
+        const totalPixels = size * size;
+
+        let correctCount = 0;
+        let wrongCount = 0;
+        for (let i = 0; i < totalPixels; i++) {
+            if (userChoices[i] === level.data[i]) {
+                correctCount++;
+            } else {
+                wrongCount++;
+            }
         }
 
-        score = 0;
-        lives = 3;
-        stage = 1;
-        bullets = [];
-        enemies = [];
-        particles = [];
-        player.x = canvas.width / 2 - 20;
+        gameStats.totalTime += secondsElapsed;
+        gameStats.totalPixels += totalPixels;
+        gameStats.correctPixels += correctCount;
+        gameStats.wrongPixels += wrongCount;
+
+        const accuracy = Math.round((correctCount / totalPixels) * 100);
+
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('summary-screen').style.display = 'flex';
+
+        document.getElementById('summary-name').innerText = `תמונה: ${level.name}`;
         
-        updateUI();
-        overlay.style.display = 'none';
-        gameRunning = true;
+        const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+        const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+        document.getElementById('summary-stats').innerHTML = `
+            זמן ביצוע: <b>${mins}:${secs}</b> | דיוק: <b>${accuracy}%</b> (${correctCount}/${totalPixels} נכונים)
+        `;
 
-        startBgMusic();
-        requestAnimationFrame(gameLoop);
+        renderResultGrid('user-result-grid', size, userChoices, level.data);
+        renderResultGrid('target-result-grid', size, level.data, null);
     }
 
-    function updateUI() {
-        document.getElementById('scoreDisplay').innerText = `ניקוד: ${score}`;
-        document.getElementById('livesDisplay').innerText = `חיים: ${'♥'.repeat(lives)}`;
-        document.getElementById('stageDisplay').innerText = `שלב: ${stage}`;
-    }
+    function renderResultGrid(elementId, size, data, targetData) {
+        const gridEl = document.getElementById(elementId);
+        buildGrid(gridEl, size, 180);
 
-    function spawnEnemies() {
-        if (enemies.length === 0) {
-            const rows = 2 + stage;
-            const cols = 7;
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    enemies.push({
-                        x: 60 + c * 70,
-                        y: 40 + r * 45,
-                        width: 35,
-                        height: 30,
-                        color: r % 2 === 0 ? '#ff0055' : '#ffcc00',
-                        vx: 1.5 + stage * 0.3
-                    });
-                }
+        for (let i = 0; i < size * size; i++) {
+            const pixelEl = gridEl.children[i];
+            const colorNum = data[i];
+            pixelEl.style.backgroundColor = COLOR_MAP[colorNum] ? COLOR_MAP[colorNum].code : '#fff';
+            
+            if (targetData && data[i] !== targetData[i]) {
+                pixelEl.style.position = 'relative';
+                pixelEl.innerHTML = '<span style="color:red; font-weight:bold; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:10px;">✕</span>';
             }
         }
     }
 
-    function createExplosion(x, y, color) {
-        playSound('explosion');
-        for (let i = 0; i < 15; i++) {
-            particles.push({
-                x: x,
-                y: y,
-                vx: (Math.random() - 0.5) * 6,
-                vy: (Math.random() - 0.5) * 6,
-                size: Math.random() * 3 + 1,
-                life: 20,
-                color: color
-            });
+    function nextLevel() {
+        if (currentLevelIdx + 1 < LEVELS.length) {
+            startLevel(currentLevelIdx + 1);
+        } else {
+            showFinalSummary();
         }
     }
 
-    // לולאת המשחק הראשי
-    function gameLoop(timestamp) {
-        if (!gameRunning || isPaused) return;
+    function showFinalSummary() {
+        document.getElementById('summary-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('final-summary-screen').style.display = 'flex';
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        playGameCompleteSound();
 
-        // --- 1. עדכון וציור כוכבים ---
-        ctx.fillStyle = '#fff';
-        stars.forEach(star => {
-            star.y += star.speed;
-            if (star.y > canvas.height) star.y = 0;
-            ctx.fillRect(star.x, star.y, star.size, star.size);
+        const mins = Math.floor(gameStats.totalTime / 60).toString().padStart(2, '0');
+        const secs = (gameStats.totalTime % 60).toString().padStart(2, '0');
+        document.getElementById('final-total-time').innerText = `${mins}:${secs}`;
+
+        const avgSeconds = gameStats.totalPixels > 0 ? (gameStats.totalTime / gameStats.totalPixels).toFixed(2) : 0;
+        document.getElementById('final-avg-time').innerText = `${avgSeconds} שניות`;
+
+        document.getElementById('final-correct-pixels').innerText = `${gameStats.correctPixels} / ${gameStats.totalPixels}`;
+        document.getElementById('final-wrong-pixels').innerText = `${gameStats.wrongPixels}`;
+
+        const accuracyPct = gameStats.totalPixels > 0 ? (gameStats.correctPixels / gameStats.totalPixels) : 0;
+        const speedBonus = gameStats.totalTime > 0 ? Math.round((gameStats.correctPixels / gameStats.totalTime) * 500) : 0;
+        const weightedScore = Math.round(accuracyPct * 10000 + speedBonus);
+
+        document.getElementById('final-score').innerText = weightedScore.toLocaleString();
+    }
+
+    function saveAsImage() {
+        const cardNode = document.getElementById('export-card');
+        
+        html2canvas(cardNode, {
+            backgroundColor: null,
+            scale: 2
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = 'pixel-game-summary.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
         });
-
-        // --- 2. תנועת שחקן ---
-        if (keys['ArrowLeft'] && player.x > 0) player.x -= player.speed;
-        if (keys['ArrowRight'] && player.x < canvas.width - player.width) player.x += player.speed;
-
-        // ירי רציף בלחיצה ממושכת
-        if (keys['Space'] && timestamp - lastShootTime > shootInterval) {
-            bullets.push({
-                x: player.x + player.width / 2 - 3,
-                y: player.y,
-                width: 6,
-                height: 12,
-                speed: 8
-            });
-            playSound('shoot');
-            lastShootTime = timestamp;
-        }
-
-        // ציור שחקן (חללית retro)
-        ctx.fillStyle = player.color;
-        ctx.beginPath();
-        ctx.moveTo(player.x + player.width / 2, player.y);
-        ctx.lineTo(player.x, player.y + player.height);
-        ctx.lineTo(player.x + player.width, player.y + player.height);
-        ctx.closePath();
-        ctx.fill();
-
-        // --- 3. עדכון קליעים ---
-        ctx.fillStyle = '#ffff00';
-        for (let i = bullets.length - 1; i >= 0; i--) {
-            let b = bullets[i];
-            b.y -= b.speed;
-            ctx.fillRect(b.x, b.y, b.width, b.height);
-
-            if (b.y < 0) bullets.splice(i, 1);
-        }
-
-        // --- 4. עדכון אויבים ---
-        spawnEnemies();
-
-        let shiftDown = false;
-        enemies.forEach(e => {
-            e.x += e.vx;
-            if (e.x <= 10 || e.x + e.width >= canvas.width - 10) {
-                shiftDown = true;
-            }
-        });
-
-        if (shiftDown) {
-            enemies.forEach(e => {
-                e.vx *= -1;
-                e.y += 15;
-            });
-        }
-
-        // ציור אויבים ובדיקת פגיעות
-        for (let ei = enemies.length - 1; ei >= 0; ei--) {
-            let e = enemies[ei];
-
-            // ציור אויב
-            ctx.fillStyle = e.color;
-            ctx.fillRect(e.x, e.y, e.width, e.height);
-
-            // התנגשות עם קליעים
-            for (let bi = bullets.length - 1; bi >= 0; bi--) {
-                let b = bullets[bi];
-                if (
-                    b.x < e.x + e.width &&
-                    b.x + b.width > e.x &&
-                    b.y < e.y + e.height &&
-                    b.y + b.height > e.y
-                ) {
-                    createExplosion(e.x + e.width / 2, e.y + e.height / 2, e.color);
-                    enemies.splice(ei, 1);
-                    bullets.splice(bi, 1);
-                    score += 10;
-                    updateUI();
-
-                    // מעבר שלב
-                    if (enemies.length === 0) {
-                        stage++;
-                        updateUI();
-                    }
-                    break;
-                }
-            }
-
-            // התנגשות אויב בשחקן או הגעה לתחתית
-            if (e.y + e.height >= player.y || e.y + e.height >= canvas.height) {
-                lives--;
-                playSound('hit');
-                updateUI();
-                createExplosion(player.x + player.width / 2, player.y, '#00ffcc');
-                enemies.splice(ei, 1);
-
-                if (lives <= 0) {
-                    gameOver();
-                    return;
-                }
-            }
-        }
-
-        // --- 5. חלקיקים (פיצוצים) ---
-        for (let pi = particles.length - 1; pi >= 0; pi--) {
-            let p = particles[pi];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.life--;
-            ctx.fillStyle = p.color;
-            ctx.fillRect(p.x, p.y, p.size, p.size);
-
-            if (p.life <= 0) particles.splice(pi, 1);
-        }
-
-        requestAnimationFrame(gameLoop);
     }
 
-    function gameOver() {
-        gameRunning = false;
-        stopBgMusic();
-        playSound('gameover');
-        
-        overlayTitle.innerText = "GAME OVER";
-        overlaySub.innerText = `הניקוד הסופי שלך: ${score}`;
-        startBtn.innerText = "שחק שוב";
-        overlay.style.display = 'flex';
+    function restartGame() {
+        gameStats = {
+            totalTime: 0,
+            totalPixels: 0,
+            correctPixels: 0,
+            wrongPixels: 0
+        };
+        startLevel(0);
     }
+
+    startLevel(0);
 </script>
 
 </body>
