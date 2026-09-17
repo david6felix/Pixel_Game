@@ -1,5 +1,5 @@
-# Pixel_Game
-game to understand how pixels work
+# Pixel Game
+Game to understand how pixels work
 
 <html lang="he" dir="rtl">
 <head>
